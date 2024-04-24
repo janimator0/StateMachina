@@ -6,50 +6,52 @@ namespace EFES.StateMachina
 {
     public class StateMachina
     {
-        public bool EnableDebug;
+        public bool EnableDebug = false;
+        
+        private const int k_ExpediteStateLimit = 10;
+        private readonly Dictionary<int, IState> m_StateById = new();
+        private readonly List<int> m_ExpeditedStates = new();
+        private IState m_CurrState;
+        private bool m_IsRunning;
 
-        readonly Dictionary<int, State> m_StateById = new();
-        readonly List<int> m_ExpediteStates = new();
-        const int k_ExpediteStateLimit = 10;
-        State m_CurrState;
-        bool m_IsRunning;
-
-        public abstract class State
+        public interface IState
         {
-            public StateMachina StateMachine;
-
-            public virtual void Init()
-            {
-            }
-
-            public virtual void Start()
-            {
-            }
-
-            public virtual void Update()
-            {
-            }
-
-            public virtual void End()
-            {
-            }
+            public void StateInit(StateMachina stateMachine);
+            public void StateStart();
+            public void StateUpdate();
+            public void StateEnd();
         }
 
-        public virtual void Update()
+        /// <summary>
+        /// This Update must be called manually by the State machine.
+        /// </summary>
+        public void StateUpdate()
         {
             if (m_IsRunning)
             {
-                m_ExpediteStates.Clear();
-                m_CurrState.Update();
+                m_ExpeditedStates.Clear();
+                m_CurrState.StateUpdate();
             }
         }
 
-        public void AssignState(State state, Enum enumId)
+        /// <summary>
+        /// Assigns a IState class to the State Machine.
+        /// </summary>
+        /// <param name="state">A class that uses the IState interface.</param>
+        /// <param name="enumId">Enum that contains a unique int value to represent the State ID.</param>
+        /// <typeparam name="T">The class type to be created as a state.</typeparam>
+        public void AssignState<T>(T state, Enum enumId) where T : class, IState
         {
             AssignState(state, Convert.ToInt32(enumId));
         }
 
-        public void AssignState(State state, int id)
+        /// <summary>
+        /// Assigns a IState class to the State Machine.
+        /// </summary>
+        /// <param name="state">A class that uses the IState interface.</param>
+        /// <param name="id">Unique int value to represent the State ID.</param>
+        /// <typeparam name="T">The class type to be created as a state.</typeparam>
+        public void AssignState<T>(T state, int id) where T : class, IState
         {
             if (state == null)
             {
@@ -66,35 +68,48 @@ namespace EFES.StateMachina
             }
 
             // SetState
-            state.StateMachine = this;
-            state.Init();
+            state.StateInit(this);
             m_StateById[id] = state;
 
-            // If first assigned state then set as starting state
-            if (m_StateById.Count == 1)
-            {
-                SetState(id);
-            }
+            // // If first assigned state then set as starting state
+            // if (m_StateById.Count == 1)
+            // {
+            //     SetState(id);
+            // }
         }
 
-        public void StartStateMachine()
+        // Start State Machine
+        public void StartStateMachine(Enum startingStateEnumId)
+        {
+            StartStateMachine(Convert.ToInt32(startingStateEnumId));
+        }
+        
+        public void StartStateMachine(int startingStateId)
+        {
+            RunStateMachine();
+            SetState(startingStateId, true);
+        }
+        
+        // Run State Machine
+        public void RunStateMachine()
         {
             m_IsRunning = true;
         }
 
-        public void StopStateMachine()
+        // Pause State Machine
+        public void PauseStateMachine()
         {
             m_IsRunning = false;
         }
 
-        public void SetState(Enum enumId, bool expediteState = false, bool force = false)
+        public void SetState(Enum enumId, bool executeStateUpdateImmidiately = false, bool force = false)
         {
-            SetState(Convert.ToInt32(enumId), expediteState, force);
+            SetState(Convert.ToInt32(enumId), executeStateUpdateImmidiately, force);
         }
 
-        public void SetState(int id, bool expediteState = false, bool force = false)
+        public void SetState(int id, bool executeStateUpdateImmidiately = false, bool force = false)
         {
-            if (!m_StateById.TryGetValue(id, out State state))
+            if (!m_StateById.TryGetValue(id, out IState state))
             {
                 Debug.LogError($"State ID {id} could not be found.");
                 return;
@@ -107,22 +122,29 @@ namespace EFES.StateMachina
 
             if (state != m_CurrState || force)
             {
-                m_CurrState?.End();
+                m_CurrState?.StateEnd();
                 m_CurrState = state;
-                m_CurrState.Start();
+                m_CurrState.StateStart();
             }
 
-            if (expediteState)
+            if (executeStateUpdateImmidiately)
             {
-                if (m_ExpediteStates.Count <= k_ExpediteStateLimit)
+                if (m_ExpeditedStates.Count <= k_ExpediteStateLimit)
                 {
-                    m_ExpediteStates.Add(id);
-                    m_CurrState.Update();
+                    if (m_IsRunning)
+                    {
+                        m_ExpeditedStates.Add(id);
+                        m_CurrState.StateUpdate();
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"Can't execute state `{m_CurrState}` this frame, because State Machine is not running.");
+                    }
                 }
                 else
                 {
                     Debug.LogError(
-                        $"Expedite state limit reached. State ID stack: <color=red>{String.Join(", ", m_ExpediteStates.ToArray())}</color>");
+                        $"Expedite state limit reached. State ID stack: <color=red>{String.Join(", ", m_ExpeditedStates.ToArray())}</color>");
                 }
             }
         }
