@@ -115,14 +115,15 @@ namespace EFES.StateMachina
                 return;
             }
 
-            if (EnableDebug)
-            {
-                Debug.Log($"State: <color=green>{state.GetType()}</color>");
-            }
-
             if (state != m_CurrState || force)
             {
                 m_CurrState?.StateEnd();
+                
+                if (EnableDebug)
+                {
+                    Debug.Log($"State: <color=green>{state.GetType()}</color>");
+                }
+                
                 m_CurrState = state;
                 m_CurrState.StateStart();
             }
@@ -138,7 +139,7 @@ namespace EFES.StateMachina
                     }
                     else
                     {
-                        Debug.LogWarning($"Can't execute state `{m_CurrState}` this frame, because State Machine is not running.");
+                        Debug.LogWarning($"Can't execute state `{m_CurrState}` immediately this frame, because State Machine is not running.");
                     }
                 }
                 else
