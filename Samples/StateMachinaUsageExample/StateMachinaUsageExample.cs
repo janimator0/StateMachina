@@ -1,5 +1,4 @@
 using UnityEngine;
-using EFES.StateMachina;
 
 namespace EFES.StateMachina
 {
@@ -33,10 +32,10 @@ namespace EFES.StateMachina
 
     public class StateButtonUp : StateMachina.IState
     {
-        private readonly StateMachinaUsageExample m_Owner;
+        private StateMachinaUsageExample m_Owner;
         private StateMachina m_StateMachine;
         private int m_UpdateCount = 0;
-        
+
         public void StateInit<T>(T owner, StateMachina stateMachine) where T : class
         {
             m_Owner = owner as StateMachinaUsageExample;
@@ -44,7 +43,7 @@ namespace EFES.StateMachina
             {
                 Debug.LogError($"Owner is not of expected type {nameof(StateMachinaUsageExample)}.");
             }
-        
+
             m_StateMachine = stateMachine;
             Debug.Log($"State Init: {GetType()}, with owner: {m_Owner.GetType()}");
         }
@@ -62,11 +61,12 @@ namespace EFES.StateMachina
             {
                 Debug.Log($"First State Update: on frame {Time.frameCount}");
             }
-            
+
             // If button down detected switch states.
             if (Input.GetKey(KeyCode.B))
             {
-                Debug.Log($"Key Down Detected on frame {Time.frameCount}. Executing next state update within this frame.");
+                Debug.Log(
+                    $"Key Down Detected on frame {Time.frameCount}. Executing next state update within this frame.");
                 m_StateMachine.SetState(StateMachinaUsageExample.State.ButtonDown, true);
             }
         }
@@ -81,17 +81,11 @@ namespace EFES.StateMachina
     {
         private StateMachina m_StateMachine;
         private int m_UpdateCount = 0;
-        
+
         public void StateInit<T>(T owner, StateMachina stateMachine) where T : class
         {
-            m_Owner = owner as StateMachinaUsageExample;
-            if (m_Owner == null)
-            {
-                Debug.LogError($"Owner is not of expected type {nameof(StateMachinaUsageExample)}.");
-            }
-        
             m_StateMachine = stateMachine;
-            Debug.Log($"State Init: {GetType()}, with owner: {m_Owner.GetType()}");
+            Debug.Log($"State Init: {GetType()}");
         }
 
         public void StateStart()
