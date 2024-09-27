@@ -7,7 +7,7 @@ namespace EFES.StateMachina
     public class StateMachina
     {
         public bool EnableDebug = false;
-        
+
         private const int k_ExpediteStateLimit = 10;
         private readonly Dictionary<int, IState> m_StateById = new();
         private readonly List<int> m_ExpeditedStates = new();
@@ -16,7 +16,7 @@ namespace EFES.StateMachina
 
         public interface IState
         {
-            public void StateInit(StateMachina stateMachine);
+            void StateInit<T>(T owner, StateMachina stateMachine) where T : class;
             public void StateStart();
             public void StateUpdate();
             public void StateEnd();
@@ -40,9 +40,10 @@ namespace EFES.StateMachina
         /// <param name="state">A class that uses the IState interface.</param>
         /// <param name="enumId">Enum that contains a unique int value to represent the State ID.</param>
         /// <typeparam name="T">The class type to be created as a state.</typeparam>
-        public void AssignState<T>(T state, Enum enumId) where T : class, IState
+        public void AssignState<T, TOwner>(TOwner owner, T state, Enum enumId)
+            where T : class, IState where TOwner : class
         {
-            AssignState(state, Convert.ToInt32(enumId));
+            AssignState(owner, state, Convert.ToInt32(enumId));
         }
 
         /// <summary>
@@ -51,7 +52,7 @@ namespace EFES.StateMachina
         /// <param name="state">A class that uses the IState interface.</param>
         /// <param name="id">Unique int value to represent the State ID.</param>
         /// <typeparam name="T">The class type to be created as a state.</typeparam>
-        public void AssignState<T>(T state, int id) where T : class, IState
+        public void AssignState<T, TOwner>(TOwner owner, T state, int id) where T : class, IState where TOwner : class
         {
             if (state == null)
             {
@@ -68,14 +69,8 @@ namespace EFES.StateMachina
             }
 
             // SetState
-            state.StateInit(this);
+            state.StateInit(owner, this);
             m_StateById[id] = state;
-
-            // // If first assigned state then set as starting state
-            // if (m_StateById.Count == 1)
-            // {
-            //     SetState(id);
-            // }
         }
 
         // Start State Machine
@@ -83,13 +78,13 @@ namespace EFES.StateMachina
         {
             StartStateMachine(Convert.ToInt32(startingStateEnumId));
         }
-        
+
         public void StartStateMachine(int startingStateId)
         {
             RunStateMachine();
             SetState(startingStateId, true);
         }
-        
+
         // Run State Machine
         public void RunStateMachine()
         {
@@ -118,12 +113,12 @@ namespace EFES.StateMachina
             if (state != m_CurrState || force)
             {
                 m_CurrState?.StateEnd();
-                
+
                 if (EnableDebug)
                 {
                     Debug.Log($"State: <color=green>{state.GetType()}</color>");
                 }
-                
+
                 m_CurrState = state;
                 m_CurrState.StateStart();
             }
@@ -139,7 +134,8 @@ namespace EFES.StateMachina
                     }
                     else
                     {
-                        Debug.LogWarning($"Can't execute state `{m_CurrState}` immediately this frame, because State Machine is not running.");
+                        Debug.LogWarning(
+                            $"Can't execute state `{m_CurrState}` immediately this frame, because State Machine is not running.");
                     }
                 }
                 else

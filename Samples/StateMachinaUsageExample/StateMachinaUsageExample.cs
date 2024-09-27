@@ -18,8 +18,8 @@ namespace EFES.StateMachina
             m_StateMachine.EnableDebug = true;
 
             // Assign States
-            m_StateMachine.AssignState(new StateButtonUp(this), State.Idle);
-            m_StateMachine.AssignState(new StateButtonDown(), State.ButtonDown);
+            m_StateMachine.AssignState(this, new StateButtonUp(), State.Idle);
+            m_StateMachine.AssignState(this, new StateButtonDown(), State.ButtonDown);
 
             // Start state machine
             m_StateMachine.StartStateMachine(State.Idle);
@@ -36,14 +36,15 @@ namespace EFES.StateMachina
         private readonly StateMachinaUsageExample m_Owner;
         private StateMachina m_StateMachine;
         private int m_UpdateCount = 0;
-
-        public StateButtonUp(StateMachinaUsageExample owner)
+        
+        public void StateInit<T>(T owner, StateMachina stateMachine) where T : class
         {
-            m_Owner = owner;
-        }
-
-        public void StateInit(StateMachina stateMachine)
-        {
+            m_Owner = owner as StateMachinaUsageExample;
+            if (m_Owner == null)
+            {
+                Debug.LogError($"Owner is not of expected type {nameof(StateMachinaUsageExample)}.");
+            }
+        
             m_StateMachine = stateMachine;
             Debug.Log($"State Init: {GetType()}, with owner: {m_Owner.GetType()}");
         }
@@ -81,10 +82,16 @@ namespace EFES.StateMachina
         private StateMachina m_StateMachine;
         private int m_UpdateCount = 0;
         
-        public void StateInit(StateMachina stateMachine)
+        public void StateInit<T>(T owner, StateMachina stateMachine) where T : class
         {
+            m_Owner = owner as StateMachinaUsageExample;
+            if (m_Owner == null)
+            {
+                Debug.LogError($"Owner is not of expected type {nameof(StateMachinaUsageExample)}.");
+            }
+        
             m_StateMachine = stateMachine;
-            Debug.Log($"State Init: {GetType()}");
+            Debug.Log($"State Init: {GetType()}, with owner: {m_Owner.GetType()}");
         }
 
         public void StateStart()
